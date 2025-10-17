@@ -1,4 +1,5 @@
 import tkinter as tk
+import customtkinter as ctk
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -10,8 +11,9 @@ from scipy.optimize import linprog
 class LPGui:
     def __init__(self, root):
         self.root = root
-        root.title("Optymalizacja LP — z zakolorowaniem obszaru dopuszczalnego")
+        root.title("Optymalizacja")
         root.geometry("1150x750")
+        ctk.set_appearance_mode("dark")
 
         self.default_coeffs = [[1.0, -1.0],
                                [2.0,  1.0],
@@ -30,20 +32,20 @@ class LPGui:
         top_frame.pack(fill='x')
 
         ttk.Label(top_frame, text="Podstawowe ograniczenia").pack(anchor='w')
-        table = ttk.Frame(top_frame)
-        table.pack(anchor='w', pady=4)
+        self.table = ttk.Frame(top_frame)
+        self.table.pack(anchor='w', pady=4)
 
         headers = ["", "A", "B", "Relacja", "RHS"]
         for col, h in enumerate(headers):
-            ttk.Label(table, text=h, width=12).grid(row=0, column=col, padx=2)
+            ttk.Label(self.table, text=h, width=12).grid(row=0, column=col, padx=2)
 
         self.base_entries = []
         for i, name in enumerate(["S1", "S2", "S3"]):
-            ttk.Label(table, text=name, width=12).grid(row=i+1, column=0)
-            eA = ttk.Entry(table, width=10); eA.grid(row=i+1, column=1); eA.insert(0, str(self.default_coeffs[i][0]))
-            eB = ttk.Entry(table, width=10); eB.grid(row=i+1, column=2); eB.insert(0, str(self.default_coeffs[i][1]))
-            sense = ttk.Combobox(table, values=['<=','>=','='], width=6); sense.grid(row=i+1, column=3); sense.set(self.default_sense[i])
-            rhs = ttk.Entry(table, width=10); rhs.grid(row=i+1, column=4); rhs.insert(0, str(self.default_rhs[i]))
+            ttk.Label(self.table, text=name, width=12).grid(row=i+1, column=0)
+            eA = ttk.Entry(self.table, width=10); eA.grid(row=i+1, column=1); eA.insert(0, str(self.default_coeffs[i][0]))
+            eB = ttk.Entry(self.table, width=10); eB.grid(row=i+1, column=2); eB.insert(0, str(self.default_coeffs[i][1]))
+            sense = ttk.Combobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=i+1, column=3); sense.set(self.default_sense[i])
+            rhs = ttk.Entry(self.table, width=10); rhs.grid(row=i+1, column=4); rhs.insert(0, str(self.default_rhs[i]))
             self.base_entries.append((eA, eB, sense, rhs))
 
         # Koszty
@@ -74,11 +76,7 @@ class LPGui:
         ttk.Label(add_row, text="RHS:").pack(side='left')
         self.add_rhs = ttk.Entry(add_row, width=10); self.add_rhs.pack(side='left', padx=2)
         ttk.Button(add_row, text="Dodaj", command=self.on_add).pack(side='left', padx=4)
-        ttk.Button(add_row, text="Usuń zaznaczone", command=self.on_remove).pack(side='left', padx=4)
-
-        self.lb = tk.Listbox(mid_frame, height=6, width=80)
-        self.lb.pack(anchor='w', pady=6)
-        self.refresh_listbox()
+        ttk.Button(add_row, text="Usuń ostatnie dodane", command=self.on_remove).pack(side='left', padx=4)
 
         # Przyciski
         btns = ttk.Frame(self.root, padding=8)
@@ -100,39 +98,41 @@ class LPGui:
             a1 = float(self.add_a1.get())
             a2 = float(self.add_a2.get())
             rhs = float(self.add_rhs.get())
-            sense = self.add_sense.get()
+            sense_val = self.add_sense.get()
         except ValueError:
             messagebox.showerror("Błąd", "Wprowadź poprawne liczby.")
             return
-        self.extra_constraints.append((a1, a2, sense, rhs))
-        self.refresh_listbox()
+
+        row = len(self.base_entries)+len(self.extra_constraints)+1
+
+        ttk.Label(self.table, text=f"S{row}", width=12).grid(row=row, column=0)
+        eA = ttk.Entry(self.table, width=10); eA.grid(row=row, column=1); eA.insert(0, str(a1))
+        eB = ttk.Entry(self.table, width=10); eB.grid(row=row, column=2); eB.insert(0, str(a2))
+        sense = ttk.Combobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=row, column=3); sense.set(sense_val)
+        rhs_entry = ttk.Entry(self.table, width=10); rhs_entry.grid(row=row, column=4); rhs_entry.insert(0, str(rhs))
+
+        self.extra_constraints.append((eA, eB, sense, rhs_entry))
 
     def on_remove(self):
-        sel = self.lb.curselection()
-        if not sel: return
-        idx = sel[0]
-        if idx >= 4:
-            extra_idx = idx - 4
-            if 0 <= extra_idx < len(self.extra_constraints):
-                self.extra_constraints.pop(extra_idx)
-        self.refresh_listbox()
+        if not self.extra_constraints:
+            messagebox.showinfo("Info", "Nie ma żadnych dodatkowych ograniczeń")
+            return
 
-    def refresh_listbox(self):
-        self.lb.delete(0, 'end')
-        for i, name in enumerate(["S1", "S2", "S3"]):
-            eA, eB, sense, rhs = self.base_entries[i]
-            self.lb.insert('end', f"{name}: {eA.get()}*A + {eB.get()}*B {sense.get()} {rhs.get()}")
-        if self.extra_constraints:
-            self.lb.insert('end', "---- Dodatkowe ----")
-            for (a1, a2, s, b) in self.extra_constraints:
-                self.lb.insert('end', f"{a1}*A + {a2}*B {s} {b}")
+        last_constraint = self.extra_constraints.pop()
+        for widget in last_constraint:
+            if hasattr(widget, 'destroy'):
+                widget.destroy()
+
+        last_row = len(self.base_entries)+len(self.extra_constraints)+1
+        for child in self.table.grid_slaves(row=last_row):
+            child.destroy()
+
 
     # --- Obliczenia i rysowanie ---
     def get_constraints(self):
         cons = []
-        for eA, eB, sense, rhs in self.base_entries:
+        for eA, eB, sense, rhs in self.base_entries + self.extra_constraints:
             cons.append((float(eA.get()), float(eB.get()), sense.get(), float(rhs.get())))
-        cons.extend(self.extra_constraints)
         return cons
 
     def plot_constraint(self, a1, a2, sense, rhs, color='orange', alpha=0.3):
@@ -190,66 +190,47 @@ class LPGui:
             messagebox.showinfo("Info", "Wszystkie ograniczenia zostały narysowane.")
             return
         a1, a2, s, rhs = cons[self.constraint_index]
-        self.plot_constraint(a1, a2, s, rhs)
+        self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='black')
         self.constraint_index += 1
 
     def solve_and_plot(self):
+        res_vertices = []
         cons = self.get_constraints()
         c = np.array([float(self.costA.get()), float(self.costB.get())])
-        if self.mode_var.get() == 'max':
-            c = -c
-
-        A_ub, b_ub, A_eq, b_eq = [], [], [], []
-        for a1, a2, s, rhs in cons:
-            if s == '<=':
-                A_ub.append([a1, a2]); b_ub.append(rhs)
-            elif s == '>=':
-                A_ub.append([-a1, -a2]); b_ub.append(-rhs)
-            else:
-                A_eq.append([a1, a2]); b_eq.append(rhs)
-
-        res = linprog(c, A_ub=A_ub or None, b_ub=b_ub or None,
-                      A_eq=A_eq or None, b_eq=b_eq or None,
-                      bounds=(0, None), method='highs')
+        mode = self.mode_var.get()
 
         self.ax.clear()
 
-        # Rysuj wszystkie ograniczenia
+        #rysowanie ograniczen
         for (a1, a2, s, rhs) in cons:
-            self.plot_constraint(a1, a2, s, rhs, alpha=0.1)
+            self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='black')
 
-        # Zakoloruj część wspólną
-        self.fill_feasible_region(cons)
+        #obliczanie wierzcholkow
+        vertices = self.compute_feasible_vertices(cons)
 
-        if res.success:
-            # Wartość optimum
-            val_opt = -res.fun if self.mode_var.get() == 'max' else res.fun
-            # Zbieramy wszystkie wierzchołki obszaru dopuszczalnego
-            vertices = self.compute_feasible_vertices(cons)
+        if not vertices:
+            messagebox.showinfo("Info", "Nie znaleziono dopuszczalnych punktów")
 
-            # Sprawdzenie, które wierzchołki dają wartość optimum
-            eps = 1e-5
-            opt_points = []
-            for x, y in vertices:
-                z = np.dot(c, [x, y])
-                if abs(z - (-val_opt if self.mode_var.get() == 'max' else val_opt)) < eps:
-                    opt_points.append((x, y))
+        values = [np.dot(c, v) for v in vertices]
 
-            if len(opt_points) == 1:
-                x_opt, y_opt = opt_points[0]
-                self.ax.scatter(x_opt, y_opt, color='red', s=80, label='Optimum')
-                messagebox.showinfo("Wynik", f"Optimum: A={x_opt:.2f}, B={y_opt:.2f}, wartość={val_opt:.2f}")
-            else:
-                # Narysuj odcinek optimum
-                xs, ys = zip(*opt_points)
-                self.ax.plot(xs, ys, color='red', linewidth=3, label='Odcinek optimum')
-                messagebox.showinfo("Wynik",
-                                    f"Optimum występuje na odcinku: A={min(xs):.2f}-{max(xs):.2f}, B={min(ys):.2f}-{max(ys):.2f}, wartość={val_opt:.2f}")
-
-            self.ax.legend()
+        if mode == 'max':
+            optimal_value = max(values)
         else:
-            messagebox.showerror("Błąd", "Nie znaleziono rozwiązania.")
+            optimal_value = min(values)
 
+        for i in range(len(vertices)):
+            if np.dot(c, vertices[i]) == optimal_value:
+                res_vertices.append(vertices[i])
+
+        res_vertices = list(set(res_vertices))
+
+        if len(res_vertices) == 1:
+            self.ax.scatter(res_vertices[0][0], res_vertices[0][1], color='red', s=80, label='Optimum')
+            messagebox.showinfo("Wynik", f"Optimum: A={res_vertices[0][0]}, B={res_vertices[0][1]}, Wartość={optimal_value}")
+        elif len(res_vertices) == 2:
+            self.ax.plot([res_vertices[0][0], res_vertices[1][0]], [res_vertices[0][1], res_vertices[1][1]], color='red', label='Odcinek Optimum', linewidth=2)
+
+        self.ax.legend()
         self.canvas.draw()
 
     def compute_feasible_vertices(self, constraints):
@@ -263,7 +244,7 @@ class LPGui:
                 continue
             x = (b1 * a4 - b2 * a2) / det
             y = (a1 * b2 - a3 * b1) / det
-            if x >= -1e-6 and y >= -1e-6 and self.is_feasible(x, y, constraints):
+            if x >= 0 and y >= 0 and self.is_feasible(x, y, constraints):
                 vertices.append((x, y))
 
         # Przecięcia z osią X (y = 0)
@@ -271,7 +252,7 @@ class LPGui:
             if abs(a1) > 1e-8:  # żeby uniknąć dzielenia przez 0
                 x = b / a1 if abs(a2) < 1e-8 else (b - a2 * 0) / a1
                 y = 0
-                if x >= -1e-6 and self.is_feasible(x, y, constraints):
+                if x >= 0 and self.is_feasible(x, y, constraints):
                     vertices.append((x, y))
 
         # Przecięcia z osią Y (x = 0)
@@ -279,7 +260,7 @@ class LPGui:
             if abs(a2) > 1e-8:
                 y = b / a2 if abs(a1) < 1e-8 else (b - a1 * 0) / a2
                 x = 0
-                if y >= -1e-6 and self.is_feasible(x, y, constraints):
+                if y >= 0 and self.is_feasible(x, y, constraints):
                     vertices.append((x, y))
 
         # Punkt (0,0)
@@ -308,22 +289,22 @@ class LPGui:
                 return False
         return True
 
-    def fill_feasible_region(self, constraints):
-        x = np.linspace(0, 3000, 400)
-        y = np.linspace(0, 3000, 400)
-        X, Y = np.meshgrid(x, y)
-        feasible = np.ones_like(X, dtype=bool)
-
-        for a1, a2, sense, rhs in constraints:
-            lhs = a1 * X + a2 * Y
-            if sense == '<=':
-                feasible &= (lhs <= rhs)
-            elif sense == '>=':
-                feasible &= (lhs >= rhs)
-            else:
-                feasible &= (np.isclose(lhs, rhs, atol=1e-3))
-
-        self.ax.contourf(X, Y, feasible, levels=[0.5, 1], colors=['#aaffaa'], alpha=0.4)
+    # def fill_feasible_region(self, constraints):
+    #     x = np.linspace(0, 3000, 400)
+    #     y = np.linspace(0, 3000, 400)
+    #     X, Y = np.meshgrid(x, y)
+    #     feasible = np.ones_like(X, dtype=bool)
+    #
+    #     for a1, a2, sense, rhs in constraints:
+    #         lhs = a1 * X + a2 * Y
+    #         if sense == '<=':
+    #             feasible &= (lhs <= rhs)
+    #         elif sense == '>=':
+    #             feasible &= (lhs >= rhs)
+    #         else:
+    #             feasible &= (np.isclose(lhs, rhs, atol=1e-3))
+    #
+    #     self.ax.contourf(X, Y, feasible, levels=[0.5, 1], colors=['#aaffaa'], alpha=0.4)
 
     def reset_plot(self):
         self.constraint_index = 0
