@@ -71,13 +71,13 @@ class LPGui:
 
         add_row = ctk.CTkFrame(mid_frame)
         add_row.pack(anchor='center', pady=4)
-        ctk.CTkLabel(add_row, text="a1:").pack(side='left')
+        ctk.CTkLabel(add_row, text="A:").pack(side='left')
         self.add_a1 = ctk.CTkEntry(add_row, width=50); self.add_a1.pack(side='left', padx=2)
-        ctk.CTkLabel(add_row, text="a2:").pack(side='left')
+        ctk.CTkLabel(add_row, text="B:").pack(side='left')
         self.add_a2 = ctk.CTkEntry(add_row, width=50); self.add_a2.pack(side='left', padx=2)
         self.add_sense = ctk.CTkComboBox(add_row, values=['<=','>=','='], width=75); self.add_sense.pack(side='left'
                                                                                     , padx=4); self.add_sense.set('<=')
-        ctk.CTkLabel(add_row, text="RHS:").pack(side='left')
+        ctk.CTkLabel(add_row, text="Limit:").pack(side='left')
         self.add_rhs = ctk.CTkEntry(add_row, width=100);
         self.add_rhs.pack(side='left', padx=2)
 
@@ -144,11 +144,21 @@ class LPGui:
 
         row = len(self.base_entries)+len(self.extra_constraints)+1
 
-        ctk.CTkLabel(self.table, text=f"S{row}", width=12).grid(row=row, column=0)
-        eA = ctk.CTkEntry(self.table, width=10); eA.grid(row=row, column=1); eA.insert(0, str(a1))
-        eB = ctk.CTkEntry(self.table, width=10); eB.grid(row=row, column=2); eB.insert(0, str(a2))
-        sense = ctk.CTkCombobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=row, column=3); sense.set(sense_val)
-        rhs_entry = ctk.CTkEntry(self.table, width=10); rhs_entry.grid(row=row, column=4); rhs_entry.insert(0, str(rhs))
+        entry_font = ("Segoe UI", 13)
+        eA = ctk.CTkEntry(self.table, width=50, font=entry_font)
+        eA.grid(row=row, column=1)
+        eA.insert(0, str(a1))
+        eB = ctk.CTkEntry(self.table, width=50, font=entry_font)
+        eB.grid(row=row, column=2)
+        eB.insert(0, str(a2))
+        sense = ctk.CTkComboBox(self.table, values=['<=', '>=', '='], width=75, font=entry_font)
+        sense.grid(row=row, column=3)
+        sense.set(sense_val)
+        rhs_entry = ctk.CTkEntry(self.table, width=100, font=entry_font)
+        rhs_entry.grid(row=row, column=4)
+        rhs_entry.insert(0, str(rhs))
+
+        #print(f"Dodano ograniczenie: {a1}*A + {a2}*B {sense} {rhs}")
 
         self.extra_constraints.append((eA, eB, sense, rhs_entry))
 
@@ -345,4 +355,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = LPGui(root)
     root.mainloop()
-
