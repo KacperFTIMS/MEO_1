@@ -5,12 +5,12 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import numpy as np
-from tkinter import ttk, messagebox
-from scipy.optimize import linprog
+from tkinter import messagebox
 
 class LPGui:
     def __init__(self, root):
         self.root = root
+        root.configure(background='#2b2b2b')
         root.title("Optymalizacja")
         root.geometry("1150x750")
         ctk.set_appearance_mode("dark")
@@ -26,73 +26,112 @@ class LPGui:
         self.constraint_index = 0
         self.build_ui()
 
-    # --- Interfejs graficzny ---
+    #UI
     def build_ui(self):
-        top_frame = ttk.Frame(self.root, padding=8)
+        # Top Frame
+        top_frame = ctk.CTkFrame(self.root)
         top_frame.pack(fill='x')
 
-        ttk.Label(top_frame, text="Podstawowe ograniczenia").pack(anchor='w')
-        self.table = ttk.Frame(top_frame)
-        self.table.pack(anchor='w', pady=4)
+        ctk.CTkLabel(top_frame, text="Podstawowe ograniczenia", font=("Segoe UI", 18, "bold")).pack(anchor='center', pady=(10,4))
+        self.table = ctk.CTkFrame(top_frame)
+        self.table.pack(anchor='center', pady=4)
 
-        headers = ["", "A", "B", "Relacja", "RHS"]
+        headers = ["", "A", "B", "Warunek", "Limit"]
+        header_font = ("Segoe UI", 14, "bold")
+        entry_font = ("Segoe UI", 13)
         for col, h in enumerate(headers):
-            ttk.Label(self.table, text=h, width=12).grid(row=0, column=col, padx=2)
+            ctk.CTkLabel(self.table, text=h, width=100, font=header_font).grid(row=0, column=col, padx=2)
 
         self.base_entries = []
         for i, name in enumerate(["S1", "S2", "S3"]):
-            ttk.Label(self.table, text=name, width=12).grid(row=i+1, column=0)
-            eA = ttk.Entry(self.table, width=10); eA.grid(row=i+1, column=1); eA.insert(0, str(self.default_coeffs[i][0]))
-            eB = ttk.Entry(self.table, width=10); eB.grid(row=i+1, column=2); eB.insert(0, str(self.default_coeffs[i][1]))
-            sense = ttk.Combobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=i+1, column=3); sense.set(self.default_sense[i])
-            rhs = ttk.Entry(self.table, width=10); rhs.grid(row=i+1, column=4); rhs.insert(0, str(self.default_rhs[i]))
+            ctk.CTkLabel(self.table, text=name, width=10, font=entry_font).grid(row=i+1, column=0)
+            eA = ctk.CTkEntry(self.table, width=50, font=entry_font); eA.grid(row=i+1, column=1); eA.insert(0, str(self.default_coeffs[i][0]))
+            eB = ctk.CTkEntry(self.table, width=50, font=entry_font); eB.grid(row=i+1, column=2); eB.insert(0, str(self.default_coeffs[i][1]))
+            sense = ctk.CTkComboBox(self.table, values=['<=','>=','='], width=75, font=entry_font); sense.grid(row=i+1, column=3); sense.set(self.default_sense[i])
+            rhs = ctk.CTkEntry(self.table, width=100, font=entry_font); rhs.grid(row=i+1, column=4); rhs.insert(0, str(self.default_rhs[i]))
             self.base_entries.append((eA, eB, sense, rhs))
 
-        # Koszty
-        cost_frame = ttk.Frame(top_frame)
-        cost_frame.pack(anchor='w', pady=6)
-        ttk.Label(cost_frame, text="Funkcja celu: ").pack(side='left')
-        ttk.Label(cost_frame, text="A").pack(side='left', padx=(8,0))
-        self.costA = ttk.Entry(cost_frame, width=8); self.costA.pack(side='left'); self.costA.insert(0, str(self.default_costs[0]))
-        ttk.Label(cost_frame, text="B").pack(side='left', padx=(8,0))
-        self.costB = ttk.Entry(cost_frame, width=8); self.costB.pack(side='left'); self.costB.insert(0, str(self.default_costs[1]))
+        # Funkcja Celu
+        cost_frame = ctk.CTkFrame(top_frame)
+        cost_frame.pack(anchor='center', pady=6)
+        ctk.CTkLabel(cost_frame, text="Funkcja celu: ").pack(side='left')
+        ctk.CTkLabel(cost_frame, text="A").pack(side='left', padx=(8,0))
+        self.costA = ctk.CTkEntry(cost_frame, width=50); self.costA.pack(side='left'); self.costA.insert(0, str(self.default_costs[0]))
+        ctk.CTkLabel(cost_frame, text="B").pack(side='left', padx=(8,0))
+        self.costB = ctk.CTkEntry(cost_frame, width=50); self.costB.pack(side='left'); self.costB.insert(0, str(self.default_costs[1]))
 
         self.mode_var = tk.StringVar(value='max')
-        ttk.Radiobutton(cost_frame, text='Max', variable=self.mode_var, value='max').pack(side='left', padx=6)
-        ttk.Radiobutton(cost_frame, text='Min', variable=self.mode_var, value='min').pack(side='left', padx=6)
+        ctk.CTkRadioButton(cost_frame, text='Max', variable=self.mode_var, value='max').pack(side='left', padx=6)
+        ctk.CTkRadioButton(cost_frame, text='Min', variable=self.mode_var, value='min').pack(side='left', padx=6)
 
-        # Dodatkowe ograniczenia
-        mid_frame = ttk.Frame(self.root, padding=8)
+        # Mid Frame
+        mid_frame = ctk.CTkFrame(self.root)
         mid_frame.pack(fill='x')
-        ttk.Label(mid_frame, text="Dodatkowe ograniczenia").pack(anchor='w')
+        ctk.CTkLabel(mid_frame, text="Dodatkowe ograniczenia").pack(anchor='center')
 
-        add_row = ttk.Frame(mid_frame)
-        add_row.pack(anchor='w', pady=4)
-        ttk.Label(add_row, text="a1:").pack(side='left')
-        self.add_a1 = ttk.Entry(add_row, width=8); self.add_a1.pack(side='left', padx=2)
-        ttk.Label(add_row, text="a2:").pack(side='left')
-        self.add_a2 = ttk.Entry(add_row, width=8); self.add_a2.pack(side='left', padx=2)
-        self.add_sense = ttk.Combobox(add_row, values=['<=','>=','='], width=6); self.add_sense.pack(side='left', padx=4); self.add_sense.set('<=')
-        ttk.Label(add_row, text="RHS:").pack(side='left')
-        self.add_rhs = ttk.Entry(add_row, width=10); self.add_rhs.pack(side='left', padx=2)
-        ttk.Button(add_row, text="Dodaj", command=self.on_add).pack(side='left', padx=4)
-        ttk.Button(add_row, text="Usuń ostatnie dodane", command=self.on_remove).pack(side='left', padx=4)
+        add_row = ctk.CTkFrame(mid_frame)
+        add_row.pack(anchor='center', pady=4)
+        ctk.CTkLabel(add_row, text="a1:").pack(side='left')
+        self.add_a1 = ctk.CTkEntry(add_row, width=50); self.add_a1.pack(side='left', padx=2)
+        ctk.CTkLabel(add_row, text="a2:").pack(side='left')
+        self.add_a2 = ctk.CTkEntry(add_row, width=50); self.add_a2.pack(side='left', padx=2)
+        self.add_sense = ctk.CTkComboBox(add_row, values=['<=','>=','='], width=75); self.add_sense.pack(side='left'
+                                                                                    , padx=4); self.add_sense.set('<=')
+        ctk.CTkLabel(add_row, text="RHS:").pack(side='left')
+        self.add_rhs = ctk.CTkEntry(add_row, width=100);
+        self.add_rhs.pack(side='left', padx=2)
 
-        # Przyciski
-        btns = ttk.Frame(self.root, padding=8)
-        btns.pack(anchor='w')
-        ttk.Button(btns, text="Następne ograniczenie", command=self.show_next_constraint).pack(side='left', padx=4)
-        ttk.Button(btns, text="Oblicz i zakoloruj", command=self.solve_and_plot).pack(side='left', padx=4)
-        ttk.Button(btns, text="Resetuj wykres", command=self.reset_plot).pack(side='left', padx=4)
+        button_style = {
+            "corner_radius": 16,
+            "fg_color": "#5C0828",
+            "hover_color": "#730a32",
+            "border_color": "#730a32",
+            "border_width": 2,
+            "height": 40,
+            "width": 150,
+            "font": ("Segoe UI", 14, "bold")
+        }
+
+        # Przyciski nowych ograniczen
+        btn_row = ctk.CTkFrame(mid_frame)
+        btn_row.pack(anchor='center', pady=(10, 6))
+
+        ctk.CTkButton(btn_row, text="Dodaj", command=self.on_add, **button_style).pack(side='left', padx=8)
+
+        ctk.CTkButton(btn_row, text="Usuń ostatnie dodane", command=self.on_remove, **button_style).pack(side='left', padx=8)
+
+        ctk.CTkLabel(mid_frame, text="Wykres").pack(anchor='center')
+
+        # Przyciski wykresu
+        btns = ctk.CTkFrame(mid_frame)
+        btns.pack(anchor='center')
+        ctk.CTkButton(btns, text="Następne ograniczenie", command=self.show_next_constraint, **button_style).pack(side='left', padx=4)
+        ctk.CTkButton(btns, text="Oblicz", command=self.solve_and_plot, **button_style).pack(side='left', padx=4)
+        ctk.CTkButton(btns, text="Resetuj wykres", command=self.reset_plot, **button_style).pack(side='left', padx=4)
 
         # Wykres
-        plot_frame = ttk.Frame(self.root)
+        plot_frame = ctk.CTkFrame(self.root)
         plot_frame.pack(fill='both', expand=True)
         self.fig, self.ax = plt.subplots(figsize=(6, 5))
+
+        self.fig.patch.set_facecolor('#2b2b2b')  # tło całego wykresu (poza osiami)
+        self.ax.set_facecolor('#0e1111')  # tło samego pola z danymi
+        self.ax.tick_params(colors='white')  # kolory osi
+        self.ax.spines['bottom'].set_color('white')
+        self.ax.spines['top'].set_color('white')
+        self.ax.spines['right'].set_color('white')
+        self.ax.spines['left'].set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.title.set_color('white')
+        self.ax.grid(True, color='#333333')
+
+
+
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
-    # --- Zarządzanie ograniczeniami ---
+    # Dodawanie ograniczeń
     def on_add(self):
         try:
             a1 = float(self.add_a1.get())
@@ -105,14 +144,15 @@ class LPGui:
 
         row = len(self.base_entries)+len(self.extra_constraints)+1
 
-        ttk.Label(self.table, text=f"S{row}", width=12).grid(row=row, column=0)
-        eA = ttk.Entry(self.table, width=10); eA.grid(row=row, column=1); eA.insert(0, str(a1))
-        eB = ttk.Entry(self.table, width=10); eB.grid(row=row, column=2); eB.insert(0, str(a2))
-        sense = ttk.Combobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=row, column=3); sense.set(sense_val)
-        rhs_entry = ttk.Entry(self.table, width=10); rhs_entry.grid(row=row, column=4); rhs_entry.insert(0, str(rhs))
+        ctk.CTkLabel(self.table, text=f"S{row}", width=12).grid(row=row, column=0)
+        eA = ctk.CTkEntry(self.table, width=10); eA.grid(row=row, column=1); eA.insert(0, str(a1))
+        eB = ctk.CTkEntry(self.table, width=10); eB.grid(row=row, column=2); eB.insert(0, str(a2))
+        sense = ctk.CTkCombobox(self.table, values=['<=','>=','='], width=6); sense.grid(row=row, column=3); sense.set(sense_val)
+        rhs_entry = ctk.CTkEntry(self.table, width=10); rhs_entry.grid(row=row, column=4); rhs_entry.insert(0, str(rhs))
 
         self.extra_constraints.append((eA, eB, sense, rhs_entry))
 
+    # Usuwanie Ograniczeń
     def on_remove(self):
         if not self.extra_constraints:
             messagebox.showinfo("Info", "Nie ma żadnych dodatkowych ograniczeń")
@@ -128,13 +168,14 @@ class LPGui:
             child.destroy()
 
 
-    # --- Obliczenia i rysowanie ---
+    # Pobierz ograniczenia
     def get_constraints(self):
         cons = []
         for eA, eB, sense, rhs in self.base_entries + self.extra_constraints:
             cons.append((float(eA.get()), float(eB.get()), sense.get(), float(rhs.get())))
         return cons
 
+    # Zarysuj ograniczenia
     def plot_constraint(self, a1, a2, sense, rhs, color='orange', alpha=0.3):
         x = np.linspace(0, 3000, 400)
         y_max = 3000
@@ -184,15 +225,18 @@ class LPGui:
         self.ax.set_ylabel("B")
         self.canvas.draw()
 
+
+    # Pokaże kolejne ograniczenie
     def show_next_constraint(self):
         cons = self.get_constraints()
         if self.constraint_index >= len(cons):
             messagebox.showinfo("Info", "Wszystkie ograniczenia zostały narysowane.")
             return
         a1, a2, s, rhs = cons[self.constraint_index]
-        self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='black')
+        self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='white')
         self.constraint_index += 1
 
+    # Wynik i rysowanie
     def solve_and_plot(self):
         res_vertices = []
         cons = self.get_constraints()
@@ -203,7 +247,7 @@ class LPGui:
 
         #rysowanie ograniczen
         for (a1, a2, s, rhs) in cons:
-            self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='black')
+            self.plot_constraint(a1, a2, s, rhs, alpha=1.5/len(cons), color='white')
 
         #obliczanie wierzcholkow
         vertices = self.compute_feasible_vertices(cons)
@@ -233,6 +277,7 @@ class LPGui:
         self.ax.legend()
         self.canvas.draw()
 
+    # Obliczanie możliwych wierzchołków
     def compute_feasible_vertices(self, constraints):
         from itertools import combinations
         vertices = []
@@ -247,7 +292,7 @@ class LPGui:
             if x >= 0 and y >= 0 and self.is_feasible(x, y, constraints):
                 vertices.append((x, y))
 
-        # Przecięcia z osią X (y = 0)
+        # Przecięcia z osią X
         for a1, a2, s, b in constraints:
             if abs(a1) > 1e-8:  # żeby uniknąć dzielenia przez 0
                 x = b / a1 if abs(a2) < 1e-8 else (b - a2 * 0) / a1
@@ -255,7 +300,7 @@ class LPGui:
                 if x >= 0 and self.is_feasible(x, y, constraints):
                     vertices.append((x, y))
 
-        # Przecięcia z osią Y (x = 0)
+        # Przecięcia z osią Y
         for a1, a2, s, b in constraints:
             if abs(a2) > 1e-8:
                 y = b / a2 if abs(a1) < 1e-8 else (b - a1 * 0) / a2
@@ -267,7 +312,7 @@ class LPGui:
         if self.is_feasible(0, 0, constraints):
             vertices.append((0, 0))
 
-        # Usuwamy duplikaty (zaokrąglenie aby uniknąć różnic numerycznych)
+        # Unikatowe wierzchołki)
         unique_vertices = []
         seen = set()
         for vx, vy in vertices:
@@ -278,6 +323,7 @@ class LPGui:
 
         return unique_vertices
 
+    # Sprawdzanie czy jest w zakresie
     def is_feasible(self, x, y, constraints, tol=1e-6):
         for a, b, s, rhs in constraints:
             val = a * x + b * y
@@ -289,29 +335,12 @@ class LPGui:
                 return False
         return True
 
-    # def fill_feasible_region(self, constraints):
-    #     x = np.linspace(0, 3000, 400)
-    #     y = np.linspace(0, 3000, 400)
-    #     X, Y = np.meshgrid(x, y)
-    #     feasible = np.ones_like(X, dtype=bool)
-    #
-    #     for a1, a2, sense, rhs in constraints:
-    #         lhs = a1 * X + a2 * Y
-    #         if sense == '<=':
-    #             feasible &= (lhs <= rhs)
-    #         elif sense == '>=':
-    #             feasible &= (lhs >= rhs)
-    #         else:
-    #             feasible &= (np.isclose(lhs, rhs, atol=1e-3))
-    #
-    #     self.ax.contourf(X, Y, feasible, levels=[0.5, 1], colors=['#aaffaa'], alpha=0.4)
-
+    # Resetowanie wykresu
     def reset_plot(self):
         self.constraint_index = 0
         self.ax.clear()
         self.canvas.draw()
 
-# --- Uruchomienie programu ---
 if __name__ == "__main__":
     root = tk.Tk()
     app = LPGui(root)
