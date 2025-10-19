@@ -114,9 +114,9 @@ class LPGui:
         plot_frame.pack(fill='both', expand=True)
         self.fig, self.ax = plt.subplots(figsize=(6, 5))
 
-        self.fig.patch.set_facecolor('#2b2b2b')  # tło całego wykresu (poza osiami)
-        self.ax.set_facecolor('#0e1111')  # tło samego pola z danymi
-        self.ax.tick_params(colors='white')  # kolory osi
+        self.fig.patch.set_facecolor('#2b2b2b')
+        self.ax.set_facecolor('#0e1111')
+        self.ax.tick_params(colors='white')
         self.ax.spines['bottom'].set_color('white')
         self.ax.spines['top'].set_color('white')
         self.ax.spines['right'].set_color('white')
