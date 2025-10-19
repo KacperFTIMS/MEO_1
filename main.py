@@ -135,6 +135,31 @@ class LPGui:
         self.canvas = FigureCanvasTkAgg(self.fig, master=plot_frame)
         self.canvas.get_tk_widget().pack(fill='both', expand=True)
 
+        menubar = tk.Menu(self.root)
+        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Pomoc", command=self.show_help)
+        menubar.add_cascade(label="❓ Pomoc", menu=help_menu)
+        self.root.config(menu=menubar)
+
+    def show_help(self):
+        """Wyświetla okno z instrukcją obsługi programu."""
+        help_text = (
+            "INSTRUKCJA OBSŁUGI PROGRAMU\n\n"
+            "INFO:\n"
+            "- Dodawanie/odejmowanie ograniczeń liniowych\n"
+            "- Zmiana parametrów aktualnych funkcji i kosztów\n"
+            "- Wybór optymalizacji maximum/minimum\n"
+            "- Wyświetlanie wyniku w formie graficznej\n"
+            "- Znajdowanie rozwiązania optymalnego (punkt, odcinek lub półprosta)\n\n"
+            "Obsługa:\n"
+            "1. Zmodyfikuj lub dodaj nowe współczynniki a w przeciwnym razie przejdź do punktu 3\n"
+            "2. Zmodufikuj funkcje celu\n"
+            "3. Kliknij 'Oblicz' lub 'Następne ograniczenie', aby zobaczyć rozwiązanie.\n"
+            "4. Kliknij 'Resetuj wykres', aby wymazać aktualne wyniki i zacząć od nowa.\n\n"
+        )
+
+        messagebox.showinfo("Pomoc", help_text)
+
     # Dodawanie ograniczeń
     def on_add(self):
         try:
@@ -149,6 +174,7 @@ class LPGui:
         row = len(self.base_entries)+len(self.extra_constraints)+1
 
         entry_font = ("Segoe UI", 13)
+        ctk.CTkLabel(self.table, text=f'D{row-3}', width=10, font=entry_font).grid(row=row, column=0)
         eA = ctk.CTkEntry(self.table, width=50, font=entry_font)
         eA.grid(row=row, column=1)
         eA.insert(0, str(a1))
@@ -280,7 +306,7 @@ class LPGui:
 
             if len(res_vertices) == 1:
                 a1, a2 = self.point_belongs_to_constraint(res_vertices)
-                if float(self.costA.get()) == a1 and float(self.costB.get()) == a2:
+                if abs(a2 * float(self.costA.get()) - a1 * float(self.costB.get())) <= 1e-8:
                     t = np.linspace(0, 3000, 1000)
                     dx, dy = a1, -a2
 
