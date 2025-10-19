@@ -158,8 +158,6 @@ class LPGui:
         rhs_entry.grid(row=row, column=4)
         rhs_entry.insert(0, str(rhs))
 
-        #print(f"Dodano ograniczenie: {a1}*A + {a2}*B {sense} {rhs}")
-
         self.extra_constraints.append((eA, eB, sense, rhs_entry))
 
     # Usuwanie Ograniczeń
@@ -262,29 +260,34 @@ class LPGui:
         #obliczanie wierzcholkow
         vertices = self.compute_feasible_vertices(cons)
 
-        if not vertices:
-            messagebox.showinfo("Info", "Nie znaleziono dopuszczalnych punktów")
+        if vertices:
+            values = [np.dot(c, v) for v in vertices]
 
-        values = [np.dot(c, v) for v in vertices]
+            if mode == 'max':
+                optimal_value = max(values)
+            else:
+                optimal_value = min(values)
 
-        if mode == 'max':
-            optimal_value = max(values)
+            for i in range(len(vertices)):
+                if np.dot(c, vertices[i]) == optimal_value:
+                    res_vertices.append(vertices[i])
+
+            res_vertices = list(set(res_vertices))
+
+            if len(res_vertices) == 1:
+                self.ax.scatter(res_vertices[0][0], res_vertices[0][1], color='red', s=80, label='Optimum')
+                messagebox.showinfo("Wynik", f"Optimum: A={res_vertices[0][0]}, B={res_vertices[0][1]}"
+                                             f", Wartość={optimal_value}")
+            elif len(res_vertices) == 2:
+                self.ax.plot([res_vertices[0][0], res_vertices[1][0]], [res_vertices[0][1], res_vertices[1][1]]
+                             , color='red', label='Odcinek Optimum', linewidth=2)
+                messagebox.showinfo("Wynik",
+                                    f"Optimum odcinek z punktu: A1={res_vertices[0][0]}, B1={res_vertices[0][1]}"
+                                    f" do punktu A2={res_vertices[1][0]}, B2={res_vertices[1][1]}, Wartość={optimal_value}")
+
+            self.ax.legend()
         else:
-            optimal_value = min(values)
-
-        for i in range(len(vertices)):
-            if np.dot(c, vertices[i]) == optimal_value:
-                res_vertices.append(vertices[i])
-
-        res_vertices = list(set(res_vertices))
-
-        if len(res_vertices) == 1:
-            self.ax.scatter(res_vertices[0][0], res_vertices[0][1], color='red', s=80, label='Optimum')
-            messagebox.showinfo("Wynik", f"Optimum: A={res_vertices[0][0]}, B={res_vertices[0][1]}, Wartość={optimal_value}")
-        elif len(res_vertices) == 2:
-            self.ax.plot([res_vertices[0][0], res_vertices[1][0]], [res_vertices[0][1], res_vertices[1][1]], color='red', label='Odcinek Optimum', linewidth=2)
-
-        self.ax.legend()
+            messagebox.showinfo("Info", "Brak Rozwiązania")
         self.canvas.draw()
 
     # Obliczanie możliwych wierzchołków
@@ -304,7 +307,7 @@ class LPGui:
 
         # Przecięcia z osią X
         for a1, a2, s, b in constraints:
-            if abs(a1) > 1e-8:  # żeby uniknąć dzielenia przez 0
+            if abs(a1) > 1e-8:
                 x = b / a1 if abs(a2) < 1e-8 else (b - a2 * 0) / a1
                 y = 0
                 if x >= 0 and self.is_feasible(x, y, constraints):
@@ -322,7 +325,7 @@ class LPGui:
         if self.is_feasible(0, 0, constraints):
             vertices.append((0, 0))
 
-        # Unikatowe wierzchołki)
+        # Unikatowe wierzchołki
         unique_vertices = []
         seen = set()
         for vx, vy in vertices:
