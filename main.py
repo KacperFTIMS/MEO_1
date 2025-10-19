@@ -1,6 +1,10 @@
 import tkinter as tk
+from cProfile import label
+
 import customtkinter as ctk
 import matplotlib
+from openpyxl.utils.units import dxa_to_cm
+
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
@@ -275,9 +279,22 @@ class LPGui:
             res_vertices = list(set(res_vertices))
 
             if len(res_vertices) == 1:
-                self.ax.scatter(res_vertices[0][0], res_vertices[0][1], color='red', s=80, label='Optimum')
-                messagebox.showinfo("Wynik", f"Optimum: A={res_vertices[0][0]}, B={res_vertices[0][1]}"
-                                             f", Wartość={optimal_value}")
+                a1, a2 = self.point_belongs_to_constraint(res_vertices)
+                if float(self.costA.get()) == a1 and float(self.costB.get()) == a2:
+                    t = np.linspace(0, 3000, 1000)
+                    dx, dy = a1, -a2
+
+                    x = res_vertices[0][0] + t * dx
+                    y = res_vertices[0][1] + t * dy
+
+                    self.ax.plot(x, y, color='red', label='Polprosta Optimum', linewidth=2)
+
+                    messagebox.showinfo("Wynik", f"Optimum polprosta z punktu: A={res_vertices[0][0]}, B={res_vertices[0][1]}. ze współczynnikami {a1} oraz {a2}"
+                                                 f", Wartość={optimal_value}")
+                else:
+                    self.ax.scatter(res_vertices[0][0], res_vertices[0][1], color='red', s=80, label='Optimum')
+                    messagebox.showinfo("Wynik", f"Optimum: A={res_vertices[0][0]}, B={res_vertices[0][1]}"
+                                                 f", Wartość={optimal_value}")
             elif len(res_vertices) == 2:
                 self.ax.plot([res_vertices[0][0], res_vertices[1][0]], [res_vertices[0][1], res_vertices[1][1]]
                              , color='red', label='Odcinek Optimum', linewidth=2)
@@ -289,6 +306,13 @@ class LPGui:
         else:
             messagebox.showinfo("Info", "Brak Rozwiązania")
         self.canvas.draw()
+
+    def point_belongs_to_constraint(self, point):
+        cons = self.get_constraints()
+        for (a1, a2, s, rhs) in cons:
+            res = a1*float(point[0][0]) + a2*float(point[0][1])
+            if res == rhs:
+                return (a1, a2)
 
     # Obliczanie możliwych wierzchołków
     def compute_feasible_vertices(self, constraints):
